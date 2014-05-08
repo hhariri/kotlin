@@ -25,6 +25,7 @@ import org.jetbrains.annotations.Nullable;
 import org.jetbrains.jet.lang.descriptors.*;
 import org.jetbrains.jet.lang.descriptors.annotations.Annotations;
 import org.jetbrains.jet.lang.descriptors.impl.AnonymousFunctionDescriptor;
+import org.jetbrains.jet.lang.descriptors.impl.LocalVariableDescriptor;
 import org.jetbrains.jet.lang.diagnostics.Diagnostic;
 import org.jetbrains.jet.lang.diagnostics.Errors;
 import org.jetbrains.jet.lang.evaluate.ConstantExpressionEvaluator;
@@ -471,7 +472,7 @@ public class BasicExpressionTypingVisitor extends ExpressionTypingVisitor {
         JetSimpleNameExpression reference = expression.getCallableReference();
 
         boolean[] result = new boolean[1];
-        FunctionDescriptor descriptor = resolveCallableReferenceTarget(lhsType, context, expression, result);
+        CallableDescriptor descriptor = resolveCallableReferenceTarget(lhsType, context, expression, result);
 
         if (!result[0]) {
             context.trace.report(UNRESOLVED_REFERENCE.on(reference, reference));
@@ -480,8 +481,8 @@ public class BasicExpressionTypingVisitor extends ExpressionTypingVisitor {
 
         ReceiverParameterDescriptor receiverParameter = descriptor.getReceiverParameter();
         ReceiverParameterDescriptor expectedThisObject = descriptor.getExpectedThisObject();
-        if (receiverParameter != null && expectedThisObject != null) {
-            context.trace.report(EXTENSION_IN_CLASS_REFERENCE_NOT_ALLOWED.on(reference, descriptor));
+        if (receiverParameter != null && expectedThisObject != null && descriptor instanceof CallableMemberDescriptor) {
+            context.trace.report(EXTENSION_IN_CLASS_REFERENCE_NOT_ALLOWED.on(reference, (CallableMemberDescriptor) descriptor));
             return null;
         }
 
@@ -492,14 +493,37 @@ public class BasicExpressionTypingVisitor extends ExpressionTypingVisitor {
         else if (expectedThisObject != null) {
             receiverType = expectedThisObject.getType();
         }
+        boolean isExtension = receiverParameter != null;
 
+        if (descriptor instanceof FunctionDescriptor) {
+            return createFunctionReferenceType(expression, context, (FunctionDescriptor) descriptor, receiverType, isExtension);
+        }
+        else if (descriptor instanceof PropertyDescriptor) {
+            return createPropertyReferenceType(expression, context, (PropertyDescriptor) descriptor, receiverType, isExtension);
+        }
+        else if (descriptor instanceof VariableDescriptor) {
+            context.trace.report(UNSUPPORTED.on(reference, "References to variables aren't supported yet"));
+            return null;
+        }
+
+        throw new UnsupportedOperationException("Callable reference resolved to an unsupported descriptor: " + descriptor);
+    }
+
+    @Nullable
+    private JetType createFunctionReferenceType(
+            @NotNull JetCallableReferenceExpression expression,
+            @NotNull ExpressionTypingContext context,
+            @NotNull FunctionDescriptor descriptor,
+            @Nullable JetType receiverType,
+            boolean isExtension
+    ) {
         //noinspection ConstantConditions
         JetType type = components.reflectionTypes.getKFunctionType(
                 Annotations.EMPTY,
                 receiverType,
                 DescriptorUtils.getValueParametersTypes(descriptor.getValueParameters()),
                 descriptor.getReturnType(),
-                receiverParameter != null
+                isExtension
         );
 
         if (type.isError()) {
@@ -510,7 +534,8 @@ public class BasicExpressionTypingVisitor extends ExpressionTypingVisitor {
         AnonymousFunctionDescriptor functionDescriptor = new AnonymousFunctionDescriptor(
                 context.scope.getContainingDeclaration(),
                 Annotations.EMPTY,
-                CallableMemberDescriptor.Kind.DECLARATION);
+                CallableMemberDescriptor.Kind.DECLARATION
+        );
 
         FunctionDescriptorUtil.initializeFromFunctionType(functionDescriptor, type, null, Modality.FINAL, Visibilities.PUBLIC);
 
@@ -520,7 +545,32 @@ public class BasicExpressionTypingVisitor extends ExpressionTypingVisitor {
     }
 
     @Nullable
-    private FunctionDescriptor resolveCallableReferenceTarget(
+    private JetType createPropertyReferenceType(
+            @NotNull JetCallableReferenceExpression expression,
+            @NotNull ExpressionTypingContext context,
+            @NotNull PropertyDescriptor descriptor,
+            @Nullable JetType receiverType,
+            boolean isExtension
+    ) {
+        JetType type = components.reflectionTypes.getKPropertyType(Annotations.EMPTY, receiverType, descriptor.getType(), isExtension,
+                                                                   descriptor.isVar());
+
+        if (type.isError()) {
+            context.trace.report(REFLECTION_TYPES_NOT_LOADED.on(expression.getDoubleColonTokenReference()));
+            return null;
+        }
+
+        LocalVariableDescriptor localVariable =
+                new LocalVariableDescriptor(context.scope.getContainingDeclaration(), Annotations.EMPTY, Name.special("<anonymous>"),
+                                            type, /* mutable = */ false);
+
+        context.trace.record(VARIABLE, expression, localVariable);
+
+        return type;
+    }
+
+    @Nullable
+    private CallableDescriptor resolveCallableReferenceTarget(
             @Nullable JetType lhsType,
             @NotNull ExpressionTypingContext context,
             @NotNull JetCallableReferenceExpression expression,
@@ -541,7 +591,7 @@ public class BasicExpressionTypingVisitor extends ExpressionTypingVisitor {
         ReceiverValue receiver = new TransientReceiver(lhsType);
         TemporaryTraceAndCache temporaryWithReceiver = TemporaryTraceAndCache.create(
                 context, "trace to resolve callable reference with receiver", reference);
-        FunctionDescriptor descriptor = resolveCallableNotCheckingArguments(
+        CallableDescriptor descriptor = resolveCallableNotCheckingArguments(
                 reference, receiver, context.replaceTraceAndCache(temporaryWithReceiver), result);
         if (result[0]) {
             temporaryWithReceiver.commit();
@@ -551,7 +601,7 @@ public class BasicExpressionTypingVisitor extends ExpressionTypingVisitor {
         JetScope staticScope = getStaticNestedClassesScope((ClassDescriptor) classifier);
         TemporaryTraceAndCache temporaryForStatic = TemporaryTraceAndCache.create(
                 context, "trace to resolve callable reference in static scope", reference);
-        FunctionDescriptor possibleStaticNestedClassConstructor = resolveCallableNotCheckingArguments(reference, NO_RECEIVER,
+        CallableDescriptor possibleStaticNestedClassConstructor = resolveCallableNotCheckingArguments(reference, NO_RECEIVER,
                 context.replaceTraceAndCache(temporaryForStatic).replaceScope(staticScope), result);
         if (result[0]) {
             temporaryForStatic.commit();
@@ -562,7 +612,7 @@ public class BasicExpressionTypingVisitor extends ExpressionTypingVisitor {
     }
 
     @Nullable
-    private FunctionDescriptor resolveCallableNotCheckingArguments(
+    private CallableDescriptor resolveCallableNotCheckingArguments(
             @NotNull JetSimpleNameExpression reference,
             @NotNull ReceiverValue receiver,
             @NotNull ExpressionTypingContext context,
@@ -570,22 +620,41 @@ public class BasicExpressionTypingVisitor extends ExpressionTypingVisitor {
     ) {
         Call call = CallMaker.makeCall(reference, receiver, null, reference, ThrowingList.<ValueArgument>instance());
 
-        TemporaryBindingTrace trace = TemporaryBindingTrace.create(context.trace, "trace to resolve as function", reference);
-
-        ExpressionTypingContext contextForResolve = context.replaceBindingTrace(trace).replaceExpectedType(NO_EXPECTED_TYPE);
+        TemporaryTraceAndCache funTrace = TemporaryTraceAndCache.create(context, "trace to resolve callable reference as function",
+                                                                        reference);
         ResolvedCall<FunctionDescriptor> function = components.expressionTypingServices.getCallExpressionResolver()
-                .getResolvedCallForFunction(call, reference, contextForResolve, CheckValueArgumentsMode.DISABLED, result);
-        if (!result[0]) return null;
+                .getResolvedCallForFunction(call, reference, context.replaceTraceAndCache(funTrace).replaceExpectedType(NO_EXPECTED_TYPE),
+                                            CheckValueArgumentsMode.DISABLED, result);
+        if (result[0]) {
+            funTrace.commit();
 
-        if (function instanceof VariableAsFunctionResolvedCall) {
-            // TODO: KProperty
-            context.trace.report(UNSUPPORTED.on(reference, "References to variables aren't supported yet"));
-            context.trace.report(UNRESOLVED_REFERENCE.on(reference, reference));
-            return null;
+            if (function instanceof VariableAsFunctionResolvedCall) {
+                context.trace.report(UNSUPPORTED.on(reference, "References to variables aren't supported yet"));
+                return null;
+            }
+
+            return function != null ? function.getResultingDescriptor() : null;
         }
 
-        trace.commit();
-        return function != null ? function.getResultingDescriptor() : null;
+        TemporaryTraceAndCache varTrace = TemporaryTraceAndCache.create(context, "trace to resolve callable reference as variable",
+                                                                        reference);
+        OverloadResolutionResults<VariableDescriptor> variableResults =
+                components.expressionTypingServices.getCallResolver().resolveSimpleProperty(
+                        BasicCallResolutionContext.create(context.replaceTraceAndCache(varTrace).replaceExpectedType(NO_EXPECTED_TYPE),
+                                                          call, CheckValueArgumentsMode.DISABLED)
+                );
+        if (!variableResults.isNothing()) {
+            ResolvedCall<VariableDescriptor> variable =
+                    OverloadResolutionResultsUtil.getResultingCall(variableResults, context.contextDependency);
+
+            varTrace.commit();
+            if (variable != null) {
+                result[0] = true;
+                return variable.getResultingDescriptor();
+            }
+        }
+
+        return null;
     }
 
     @Override
