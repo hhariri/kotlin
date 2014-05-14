@@ -537,34 +537,34 @@
       <copy file="dependencies/annotations/kotlin-android-sdk-annotations.jar" todir="${kotlin-home}/lib"/>
     </target>
 
-    <target name="runtime">
-        <macrodef name="new_kotlinc">
-          <attribute name="src"/>
-          <attribute name="output"/>
-          <attribute name="classpath"/>
+    <macrodef name="new_kotlinc">
+        <attribute name="src"/>
+        <attribute name="output"/>
+        <attribute name="classpath"/>
 
-          <sequential>
-            <cleandir dir="@{output}"/>
+        <sequential>
+        <cleandir dir="@{output}"/>
 
-            <java classname="org.jetbrains.jet.cli.jvm.K2JVMCompiler" failonerror="true" fork="true">
-              <classpath>
-                <path refid="classpath"/>
-                <pathelement location="${kotlin-home}/lib/kotlin-compiler.jar"/>
-              </classpath>
-              <assertions>
-                <enable/>
-              </assertions>
-              <arg value="-src"/>
-              <arg value="@{src}"/>
-              <arg value="-output"/>
-              <arg value="@{output}"/>
-              <arg value="-noStdlib"/>
-              <arg value="-classpath"/>
-              <arg value="@{classpath}"/>
-            </java>
-          </sequential>
-        </macrodef>
+        <java classname="org.jetbrains.jet.cli.jvm.K2JVMCompiler" failonerror="true" fork="true">
+            <classpath>
+            <path refid="classpath"/>
+            <pathelement location="${kotlin-home}/lib/kotlin-compiler.jar"/>
+            </classpath>
+            <assertions>
+            <enable/>
+            </assertions>
+            <arg value="-src"/>
+            <arg value="@{src}"/>
+            <arg value="-output"/>
+            <arg value="@{output}"/>
+            <arg value="-noStdlib"/>
+            <arg value="-classpath"/>
+            <arg value="@{classpath}"/>
+        </java>
+        </sequential>
+    </macrodef>
 
+    <target name="runtime.jvm">
         <new_kotlinc src="${basedir}/core/builtins/src${path.separator}${basedir}/core/runtime.jvm/src${path.separator}${basedir}/core/reflection/src"
                      output="${output}/classes/runtime"
                      classpath="${basedir}/core/runtime.jvm/src"/>
@@ -573,11 +573,15 @@
             <src path="${basedir}/core/runtime.jvm/src"/>
             <classpath location="${output}/classes/runtime"/>
         </javac2>
+    </target>
 
+    <target name="stdlib">
         <new_kotlinc src="${basedir}/libraries/stdlib/src"
                      output="${output}/classes/stdlib"
                      classpath="${output}/classes/runtime"/>
+    </target>
 
+    <target name="runtime">
         <jar destfile="${kotlin-home}/lib/kotlin-runtime.jar">
             <fileset dir="${output}/classes/runtime"/>
             <fileset dir="${output}/classes/stdlib"/>
@@ -614,11 +618,11 @@
 
     <!-- builds redistributables from sources -->
     <target name="dist"
-            depends="clean,init,prepareDist,preloader,builtins,compiler,compilerSources,antTools,jdkAnnotations,androidSdkAnnotations,runtime,runtime_sources,jslib"/>
+            depends="clean,init,prepareDist,preloader,builtins,compiler,compilerSources,antTools,jdkAnnotations,androidSdkAnnotations,runtime.jvm,stdlib,runtime,runtime_sources,jslib"/>
 
     <!-- builds everything, but classes are reused from project out dir, doesn't run proguard and javadoc -->
     <target name="dist_quick"
-            depends="clean,init,prepareDist,preloader,builtins,compiler_quick,antTools,jdkAnnotations,androidSdkAnnotations,runtime,runtime_sources,jslib"/>
+            depends="clean,init,prepareDist,preloader,builtins,compiler_quick,antTools,jdkAnnotations,androidSdkAnnotations,runtime.jvm,stdlib,runtime,runtime_sources,jslib"/>
 
     <!-- builds compiler jar from project out dir -->
     <target name="dist_quick_compiler_only"
