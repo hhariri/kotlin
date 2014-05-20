@@ -4,4 +4,4 @@ fun a() {
 
 }
 
-val a = ""
+val a = a()

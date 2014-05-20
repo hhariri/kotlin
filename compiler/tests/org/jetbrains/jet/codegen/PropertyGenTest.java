@@ -42,9 +42,11 @@ public class PropertyGenTest extends CodegenTestCase {
         loadFile();
         Class<?> aClass = generateClass("PrivateVal");
         Field[] fields = aClass.getDeclaredFields();
-        assertEquals(1, fields.length);  // prop
-        Field field = fields[0];
-        assertEquals("prop", field.getName());
+        assertTrue(fields.length >= 1);
+        for (Field field : fields) {
+            if (field.getName().equals("prop")) return;
+        }
+        fail("No prop was found in " + aClass);
     }
 
     public void testPrivateVar() throws Exception {

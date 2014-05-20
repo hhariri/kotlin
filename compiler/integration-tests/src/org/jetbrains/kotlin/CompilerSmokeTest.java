@@ -20,7 +20,7 @@ import org.junit.Test;
 
 import java.io.File;
 
-import static junit.framework.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 public class CompilerSmokeTest extends KotlinIntegrationTestBase {
 
@@ -29,7 +29,7 @@ public class CompilerSmokeTest extends KotlinIntegrationTestBase {
         String jar = tmpdir.getTmpDir().getAbsolutePath() + File.separator + "hello.jar";
 
         assertEquals("compilation failed", 0, runCompiler("hello.compile", "-src", "hello.kt", "-jar", jar));
-        runJava("hello.run", "-cp", jar, "Hello.HelloPackage");
+        runJava("hello.run", "-cp", jar + File.pathSeparator + getKotlinRuntimePath(), "Hello.HelloPackage");
     }
 
     @Test
@@ -37,7 +37,7 @@ public class CompilerSmokeTest extends KotlinIntegrationTestBase {
         String jar = tmpdir.getTmpDir().getAbsolutePath() + File.separator + "hello.jar";
 
         assertEquals("compilation failed", 0, runCompiler("hello.compile", "-src", "hello.kt", "-jar", jar));
-        runJava("hello.run", "-cp", jar, "Hello.HelloPackage");
+        runJava("hello.run", "-cp", jar + File.pathSeparator + getKotlinRuntimePath(), "Hello.HelloPackage");
     }
 
     @Test
@@ -45,7 +45,7 @@ public class CompilerSmokeTest extends KotlinIntegrationTestBase {
         String jar = tmpdir.getTmpDir().getAbsolutePath() + File.separator + "hello.jar";
 
         assertEquals("compilation failed", 0, runCompiler("hello.compile", "-src", "hello.kt", "-jar", jar));
-        runJava("hello.run", "-cp", jar, "Hello.HelloPackage");
+        runJava("hello.run", "-cp", jar + File.pathSeparator + getKotlinRuntimePath(), "Hello.HelloPackage");
     }
 
     @Test
