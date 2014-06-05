@@ -68,4 +68,49 @@ class StringTest {
         assertEquals(0..0, "a".indices)
         assertEquals(IntRange.EMPTY, "".indices)
     }
+    
+    test fun replaceRange() {
+        val s = "sample text"
+        assertEquals("sa??e text", s.replace(2,5, "??"))
+        assertEquals("sa??e text", s.replace(2..5, "??"))
+        
+    }
+    
+    test fun substringDelimiter() {
+        val s = "-1,22,3+"
+        // chars
+        assertEquals("22,3+", s.substringAfter(','))
+        assertEquals("3+", s.substringAfterLast(','))
+        assertEquals("-1", s.substringBefore(','))
+        assertEquals("-1,22", s.substringBeforeLast(','))
+
+        // strings
+        assertEquals("22,3+", s.substringAfter(","))
+        assertEquals("3+", s.substringAfterLast(","))
+        assertEquals("-1", s.substringBefore(","))
+        assertEquals("-1,22", s.substringBeforeLast(","))
+
+        // corner
+        assertEquals("", s.substringAfter("+"))
+        assertEquals("", s.substringBefore("-"))
+        assertEquals(s, s.substringBefore("="))
+        assertEquals("", s.substringAfter("="))
+
+    }
+
+    test fun replaceDelimiter() {
+        val s = "/user/folder/file.extension"
+        // chars
+        assertEquals("/user/folder/file.doc", s.replaceAfter('.', "doc"))
+        assertEquals("/user/folder/another.doc", s.replaceAfterLast('/', "another.doc"))
+        assertEquals("new name.extension", s.replaceBefore('.',"new name"))
+        assertEquals("/new/path/file.extension", s.replaceBeforeLast('/', "/new/path"))
+        
+        // strings
+        assertEquals("/user/folder/file.doc", s.replaceAfter(".", "doc"))
+        assertEquals("/user/folder/another.doc", s.replaceAfterLast("/", "another.doc"))
+        assertEquals("new name.extension", s.replaceBefore(".","new name"))
+        assertEquals("/new/path/file.extension", s.replaceBeforeLast("/", "/new/path"))
+    }
+
 }
