@@ -112,5 +112,4 @@ class StringTest {
         assertEquals("new name.extension", s.replaceBefore(".","new name"))
         assertEquals("/new/path/file.extension", s.replaceBeforeLast("/", "/new/path"))
     }
-
 }
