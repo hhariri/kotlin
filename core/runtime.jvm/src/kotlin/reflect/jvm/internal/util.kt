@@ -16,6 +16,7 @@
 
 package kotlin.reflect.jvm.internal
 
+import java.lang.reflect.Method
 import java.util.concurrent.ConcurrentHashMap
 
 // TODO: use stdlib?
@@ -30,6 +31,17 @@ private fun String.capitalizeWithJavaBeanConvention(): String {
 
 private fun getterName(propertyName: String): String = "get${propertyName.capitalizeWithJavaBeanConvention()}"
 private fun setterName(propertyName: String): String = "set${propertyName.capitalizeWithJavaBeanConvention()}"
+
+
+private fun Class<*>.getMaybeDeclaredMethod(name: String, vararg parameterTypes: Class<*>): Method {
+    try {
+        return getMethod(name, *parameterTypes)
+    }
+    catch (e: NoSuchMethodException) {
+        // A temporary solution to support private methods
+        return getDeclaredMethod(name, *parameterTypes)
+    }
+}
 
 
 // TODO: should use weak references
