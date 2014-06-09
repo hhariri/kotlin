@@ -49,7 +49,6 @@ import org.jetbrains.jet.lang.resolve.constants.IntegerValueConstant;
 import org.jetbrains.jet.lang.resolve.constants.IntegerValueTypeConstant;
 import org.jetbrains.jet.lang.resolve.java.AsmTypeConstants;
 import org.jetbrains.jet.lang.resolve.java.JvmAbi;
-import org.jetbrains.jet.lang.resolve.java.JvmClassName;
 import org.jetbrains.jet.lang.resolve.java.PackageClassUtils;
 import org.jetbrains.jet.lang.resolve.java.descriptor.JavaClassDescriptor;
 import org.jetbrains.jet.lang.resolve.java.descriptor.SamConstructorDescriptor;
@@ -2436,9 +2435,8 @@ public class ExpressionCodegen extends JetVisitor<StackValue, StackValue> implem
 
             DeclarationDescriptor containingDeclaration = descriptor.getContainingDeclaration();
             if (containingDeclaration instanceof PackageFragmentDescriptor) {
-                reflectionFieldOwner = JvmClassName.byFqNameWithoutInnerClasses(
-                        PackageClassUtils.getPackageClassFqName(((PackageFragmentDescriptor) containingDeclaration).getFqName())
-                ).getInternalName();
+                reflectionFieldOwner =
+                        PackageClassUtils.getPackageClassInternalName(((PackageFragmentDescriptor) containingDeclaration).getFqName());
 
                 ownerType = K_PACKAGE_IMPL_TYPE;
                 reflectionFieldName = JvmAbi.KOTLIN_PACKAGE_FIELD_NAME;
