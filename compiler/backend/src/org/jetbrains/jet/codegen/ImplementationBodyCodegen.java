@@ -54,7 +54,6 @@ import org.jetbrains.jet.lang.resolve.java.jvmSignature.JvmClassSignature;
 import org.jetbrains.jet.lang.resolve.java.jvmSignature.JvmMethodParameterKind;
 import org.jetbrains.jet.lang.resolve.java.jvmSignature.JvmMethodParameterSignature;
 import org.jetbrains.jet.lang.resolve.java.jvmSignature.JvmMethodSignature;
-import org.jetbrains.jet.lang.resolve.kotlin.PackagePartClassUtils;
 import org.jetbrains.jet.lang.resolve.name.Name;
 import org.jetbrains.jet.lang.types.*;
 import org.jetbrains.jet.lang.types.checker.JetTypeChecker;
@@ -67,18 +66,16 @@ import org.jetbrains.org.objectweb.asm.commons.Method;
 import java.util.*;
 
 import static org.jetbrains.jet.codegen.AsmUtil.*;
-import static org.jetbrains.jet.lang.resolve.java.diagnostics.DiagnosticsPackage.DelegationToTraitImpl;
-import static org.jetbrains.jet.lang.resolve.java.diagnostics.DiagnosticsPackage.OtherOrigin;
 import static org.jetbrains.jet.codegen.JvmCodegenUtil.*;
-import static org.jetbrains.jet.lang.resolve.java.diagnostics.JvmDeclarationOrigin.NO_ORIGIN;
 import static org.jetbrains.jet.codegen.binding.CodegenBinding.*;
 import static org.jetbrains.jet.descriptors.serialization.NameSerializationUtil.createNameResolver;
 import static org.jetbrains.jet.lang.resolve.BindingContextUtils.descriptorToDeclaration;
 import static org.jetbrains.jet.lang.resolve.DescriptorUtils.*;
-import static org.jetbrains.jet.lang.resolve.java.AsmTypeConstants.JAVA_STRING_TYPE;
-import static org.jetbrains.jet.lang.resolve.java.AsmTypeConstants.K_CLASS_IMPL_TYPE;
-import static org.jetbrains.jet.lang.resolve.java.AsmTypeConstants.OBJECT_TYPE;
+import static org.jetbrains.jet.lang.resolve.java.AsmTypeConstants.*;
 import static org.jetbrains.jet.lang.resolve.java.JvmAnnotationNames.KotlinSyntheticClass;
+import static org.jetbrains.jet.lang.resolve.java.diagnostics.DiagnosticsPackage.DelegationToTraitImpl;
+import static org.jetbrains.jet.lang.resolve.java.diagnostics.DiagnosticsPackage.OtherOrigin;
+import static org.jetbrains.jet.lang.resolve.java.diagnostics.JvmDeclarationOrigin.NO_ORIGIN;
 import static org.jetbrains.org.objectweb.asm.Opcodes.*;
 
 public class ImplementationBodyCodegen extends ClassBodyCodegen {
@@ -475,8 +472,8 @@ public class ImplementationBodyCodegen extends ClassBodyCodegen {
             return;
         }
 
-        generateReflectionObjectField(state, classAsmType, v, K_CLASS_IMPL_TYPE, JvmAbi.KOTLIN_CLASS_FIELD_NAME,
-                                      createOrGetClInitCodegen().v);
+        generateReflectionObjectField(state, classAsmType, v, method("kClass", K_CLASS_IMPL_TYPE, getType(Class.class)),
+                                      JvmAbi.KOTLIN_CLASS_FIELD_NAME, createOrGetClInitCodegen().v);
 
         generatePropertyMetadataArrayFieldIfNeeded(classAsmType);
     }
