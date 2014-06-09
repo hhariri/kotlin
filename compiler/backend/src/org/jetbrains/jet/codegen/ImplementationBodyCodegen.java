@@ -207,6 +207,8 @@ public class ImplementationBodyCodegen extends ClassBodyCodegen {
         writeInnerClasses();
 
         AnnotationCodegen.forClass(v.getVisitor(), typeMapper).genAnnotations(descriptor);
+
+        generateReflectionObjectFieldIfNeeded();
     }
 
     @Override
@@ -427,7 +429,7 @@ public class ImplementationBodyCodegen extends ClassBodyCodegen {
 
     @Override
     protected void generateSyntheticParts() {
-        generateStaticSyntheticFields();
+        generatePropertyMetadataArrayFieldIfNeeded(classAsmType);
 
         generateFieldForSingleton();
 
@@ -464,7 +466,7 @@ public class ImplementationBodyCodegen extends ClassBodyCodegen {
         genClosureFields(context.closure, v, typeMapper);
     }
 
-    private void generateStaticSyntheticFields() {
+    private void generateReflectionObjectFieldIfNeeded() {
         if (isAnnotationClass(descriptor)) {
             // There's a bug in JDK 6 and 7 that prevents us from generating a static field in an annotation class:
             // http://bugs.java.com/bugdatabase/view_bug.do?bug_id=6857918
@@ -474,8 +476,6 @@ public class ImplementationBodyCodegen extends ClassBodyCodegen {
 
         generateReflectionObjectField(state, classAsmType, v, method("kClass", K_CLASS_IMPL_TYPE, getType(Class.class)),
                                       JvmAbi.KOTLIN_CLASS_FIELD_NAME, createOrGetClInitCodegen().v);
-
-        generatePropertyMetadataArrayFieldIfNeeded(classAsmType);
     }
 
     private boolean isGenericToArrayPresent() {
