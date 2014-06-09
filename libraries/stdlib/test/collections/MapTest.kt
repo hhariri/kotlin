@@ -53,7 +53,7 @@ class MapTest {
         assertEquals(map.size(), 1)
         assertEquals("James", map["name"])
     }
-    
+
     test fun iterate() {
         val map = TreeMap<String, String>()
         map["beverage"] = "beer"
@@ -214,6 +214,23 @@ class MapTest {
         println("==== worked! $list")
     }
     */
+
+    test
+    fun merge() {
+        expect(mapOf(1 to "ab", 2 to "bc", 3 to "cd")) {
+            mapOf(1 to "a", 2 to "b", 3 to "c").merge(mapOf(1 to "b", 2 to "c", 3 to "d")) { k, a, b -> a + b }
+        }
+
+        expect(mapOf(1 to "ab", 2 to "b", 3 to "d")) {
+            mapOf(1 to "a", 2 to "b").merge(mapOf(1 to "b", 3 to "d")) { k, a, b ->
+                when {
+                    a == null -> b
+                    b == null -> a
+                    else -> a + b
+                }
+            }
+        }
+    }
 
     test fun toProperties() {
         val map = hashMapOf("a" to "A", "b" to "B")
