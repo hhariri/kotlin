@@ -28,24 +28,19 @@ import org.jetbrains.jet.cli.common.CLICompiler;
 import org.jetbrains.jet.cli.common.ExitCode;
 import org.jetbrains.jet.cli.common.KotlinVersion;
 import org.jetbrains.jet.cli.common.arguments.CommonCompilerArguments;
+import org.jetbrains.jet.cli.common.arguments.CompilerArgumentsUtil;
 import org.jetbrains.jet.cli.common.arguments.K2JVMCompilerArguments;
 import org.jetbrains.jet.cli.common.messages.CompilerMessageLocation;
 import org.jetbrains.jet.cli.common.messages.CompilerMessageSeverity;
 import org.jetbrains.jet.cli.common.messages.MessageCollector;
 import org.jetbrains.jet.cli.jvm.K2JVMCompiler;
-import org.jetbrains.jet.cli.common.arguments.CompilerArgumentsUtil;
-import org.jetbrains.jet.codegen.inline.InlineCodegenUtil;
 
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Enumeration;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -317,7 +312,6 @@ public abstract class KotlinCompileMojoBase extends AbstractMojo {
         if (!CompilerArgumentsUtil.checkOption(arguments.inline)) {
             throw new MojoExecutionException(CompilerArgumentsUtil.getWrongInlineOptionErrorMessage(arguments.inline));
         }
-        log.info("Method inlining is " + CompilerArgumentsUtil.optionToBooleanFlag(arguments.inline, InlineCodegenUtil.DEFAULT_INLINE_FLAG));
     }
 
     protected String getFullAnnotationsPath(Log log, List<String> annotations) {
