@@ -31,7 +31,6 @@ import org.jetbrains.jet.JetTestCaseBuilder;
 import org.jetbrains.jet.JetTestUtils;
 import org.jetbrains.jet.TestJdkKind;
 import org.jetbrains.jet.analyzer.AnalyzeExhaust;
-import org.jetbrains.jet.cli.common.CLIConfigurationKeys;
 import org.jetbrains.jet.cli.common.messages.AnalyzerWithCompilerReport;
 import org.jetbrains.jet.cli.common.messages.MessageCollectorPlainTextToStream;
 import org.jetbrains.jet.cli.jvm.compiler.JetCoreEnvironment;
@@ -48,6 +47,7 @@ import org.jetbrains.jet.lang.psi.JetDeclaration;
 import org.jetbrains.jet.lang.psi.JetFile;
 import org.jetbrains.jet.lang.resolve.DescriptorUtils;
 import org.jetbrains.jet.lang.resolve.lazy.JvmResolveUtil;
+import org.jetbrains.jet.lang.resolve.name.FqNameUnsafe;
 import org.jetbrains.jet.utils.UtilsPackage;
 
 import java.io.File;
@@ -65,9 +65,6 @@ public class TestlibTest extends UsefulTestCase {
     }
 
     private TestSuite suite;
-    private GeneratedClassLoader classLoader;
-    private GenerationState state;
-    private JetCoreEnvironment environment;
 
     private Test buildTestSuite() {
         suite = new TestSuite("stdlib test");
@@ -98,7 +95,7 @@ public class TestlibTest extends UsefulTestCase {
         configuration.add(CommonConfigurationKeys.SOURCE_ROOTS_KEY, JetTestCaseBuilder.getHomeDirectory() + "/libraries/stdlib/test");
         configuration.add(CommonConfigurationKeys.SOURCE_ROOTS_KEY, JetTestCaseBuilder.getHomeDirectory() + "/libraries/kunit/src");
 
-        environment = JetCoreEnvironment.createForTests(getTestRootDisposable(), configuration);
+        final JetCoreEnvironment environment = JetCoreEnvironment.createForTests(getTestRootDisposable(), configuration);
 
         AnalyzerWithCompilerReport analyzer = new AnalyzerWithCompilerReport(MessageCollectorPlainTextToStream.PLAIN_TEXT_TO_SYSTEM_ERR);
         analyzer.analyzeAndReport(new Function0<AnalyzeExhaust>() {
@@ -113,24 +110,7 @@ public class TestlibTest extends UsefulTestCase {
         assert exhaust != null : "Not analyzed";
         exhaust.throwIfError();
 
-        if (analyzer.hasErrors()) {
-            throw new IllegalStateException("There were compilation errors");
-        }
-
-        state = GenerationUtils.compileFilesGetGenerationState(environment.getProject(), exhaust, environment.getSourceFiles());
-
-        classLoader = new GeneratedClassLoader(state.getFactory(), new URLClassLoader(
-                new URL[] {ForTestCompileRuntime.runtimeJarForTests().toURI().toURL()}, null)
-        ) {
-            @Override
-            public Class<?> loadClass(@NotNull String name) throws ClassNotFoundException {
-                if (name.startsWith("junit.") || name.startsWith("org.junit.")) {
-                    //In other way we don't find any test cause will have two different TestCase classes!
-                    return TestlibTest.class.getClassLoader().loadClass(name);
-                }
-                return super.loadClass(name);
-            }
-        };
+        final StdLibTests stdLibTests = new StdLibTests(environment, analyzer);
 
         int totalTestMethods = 0;
         for (JetFile file : environment.getSourceFiles()) {
@@ -151,7 +131,7 @@ public class TestlibTest extends UsefulTestCase {
 
                 List<String> testMethods = new ArrayList<String>();
                 for (DeclarationDescriptor member : descriptor.getDefaultType().getMemberScope().getAllDescriptors()) {
-                    if ((member instanceof FunctionDescriptor)) {
+                    if (member instanceof FunctionDescriptor) {
                         String name = member.getName().asString();
                         if (name.startsWith("test")) {
                             testMethods.add(name);
@@ -166,15 +146,9 @@ public class TestlibTest extends UsefulTestCase {
                     suite.addTest(new TestCase() {
                         @Override
                         public void run(TestResult result) {
-                            try {
-                                Class<?> aClass = classLoader.loadClass(DescriptorUtils.getFqName(descriptor).asString());
-                                TestCase testCase = (TestCase) aClass.newInstance();
-                                testCase.setName(testMethod);
-                                suite.runTest(testCase, result);
-                            }
-                            catch (Exception e) {
-                                throw UtilsPackage.rethrow(e);
-                            }
+                            TestCase testCase = stdLibTests.loadTestCase(DescriptorUtils.getFqName(descriptor));
+                            testCase.setName(testMethod);
+                            suite.runTest(testCase, result);
                         }
                     });
                 }
@@ -187,12 +161,53 @@ public class TestlibTest extends UsefulTestCase {
         }
     }
 
-    @Override
-    protected void tearDown() throws Exception {
-        classLoader.dispose();
-        classLoader = null;
-        state = null;
-        environment = null;
-        super.tearDown();
+    private static class StdLibTests {
+        private final JetCoreEnvironment environment;
+        private final AnalyzerWithCompilerReport analyzer;
+
+        private GeneratedClassLoader classLoader;
+
+        public StdLibTests(@NotNull JetCoreEnvironment environment, @NotNull AnalyzerWithCompilerReport analyzer) {
+            this.environment = environment;
+            this.analyzer = analyzer;
+        }
+
+        private void compileToClassFiles() throws Exception {
+            if (analyzer.hasErrors()) {
+                throw new IllegalStateException("There were compilation errors");
+            }
+
+            //noinspection ConstantConditions
+            GenerationState state =
+                    GenerationUtils.compileFilesGetGenerationState(environment.getProject(), analyzer.getAnalyzeExhaust(),
+                                                                   environment.getSourceFiles());
+
+            classLoader = new GeneratedClassLoader(state.getFactory(), new URLClassLoader(
+                    new URL[] {ForTestCompileRuntime.runtimeJarForTests().toURI().toURL()}, null)
+            ) {
+                @Override
+                public Class<?> loadClass(@NotNull String name) throws ClassNotFoundException {
+                    if (name.startsWith("junit.") || name.startsWith("org.junit.")) {
+                        //In other way we don't find any test cause will have two different TestCase classes!
+                        return TestlibTest.class.getClassLoader().loadClass(name);
+                    }
+                    return super.loadClass(name);
+                }
+            };
+        }
+
+        @NotNull
+        public TestCase loadTestCase(@NotNull FqNameUnsafe fqName) {
+            try {
+                if (classLoader == null) {
+                    compileToClassFiles();
+                }
+                Class<?> aClass = classLoader.loadClass(fqName.asString());
+                return (TestCase) aClass.newInstance();
+            }
+            catch (Exception e) {
+                throw UtilsPackage.rethrow(e);
+            }
+        }
     }
 }
