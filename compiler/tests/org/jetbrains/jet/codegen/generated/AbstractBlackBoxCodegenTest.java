@@ -17,9 +17,12 @@
 package org.jetbrains.jet.codegen.generated;
 
 import com.intellij.openapi.util.io.FileUtil;
+import com.intellij.util.ArrayUtil;
 import com.intellij.util.Processor;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.jet.*;
+import org.jetbrains.jet.ConfigurationKind;
+import org.jetbrains.jet.JetTestUtils;
+import org.jetbrains.jet.TestJdkKind;
 import org.jetbrains.jet.cli.jvm.compiler.JetCoreEnvironment;
 import org.jetbrains.jet.codegen.CodegenTestCase;
 import org.jetbrains.jet.codegen.InlineTestUtil;
@@ -66,7 +69,7 @@ public abstract class AbstractBlackBoxCodegenTest extends CodegenTestCase {
 
         Collections.sort(files);
 
-        loadFiles(files.toArray(new String[files.size()]));
+        loadFiles(ArrayUtil.toStringArray(files));
         blackBox();
     }
 
@@ -80,7 +83,7 @@ public abstract class AbstractBlackBoxCodegenTest extends CodegenTestCase {
         File javaClassesTempDirectory = compileJava(ktFile.replaceFirst("\\.kt$", ".java"));
 
         myEnvironment = JetCoreEnvironment.createForTests(getTestRootDisposable(), JetTestUtils.compilerConfigurationForTests(
-                ConfigurationKind.ALL, TestJdkKind.MOCK_JDK, JetTestUtils.getAnnotationsJar(), javaClassesTempDirectory));
+                ConfigurationKind.ALL, TestJdkKind.FULL_JDK, JetTestUtils.getAnnotationsJar(), javaClassesTempDirectory));
 
         loadFile(ktFile);
         blackBox();

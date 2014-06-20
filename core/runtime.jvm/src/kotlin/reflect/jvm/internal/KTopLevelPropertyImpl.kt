@@ -23,7 +23,7 @@ open class KTopLevelPropertyImpl<out R>(
         protected val owner: KPackageImpl
 ) : KTopLevelProperty<R>, KVariableImpl<R>(name) {
     // TODO: extract, make lazy (weak?), use our descriptors knowledge, support Java fields
-    protected val getter: Method = owner.jClass.getMethod(getterName(name))
+    val getter: Method = owner.jClass.getMethod(getterName(name))
 
     override fun get(): R {
         return getter(null) as R
@@ -34,7 +34,7 @@ class KMutableTopLevelPropertyImpl<R>(
         name: String,
         owner: KPackageImpl
 ) : KMutableTopLevelProperty<R>, KTopLevelPropertyImpl<R>(name, owner) {
-    private val setter = owner.jClass.getMethod(setterName(name), getter.getReturnType()!!)
+    val setter = owner.jClass.getMethod(setterName(name), getter.getReturnType()!!)
 
     override fun set(value: R) {
         setter.invoke(null, value)
