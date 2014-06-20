@@ -8,9 +8,6 @@ import java.lang.*;
 native
 public val noImpl : Nothing = throw Exception()
 
-/** Provides [] access to maps */
-native public fun <K, V> MutableMap<K, V>.set(key: K, value: V): Unit = noImpl
-
 library("println")
 public fun println() {}
 library("println")
