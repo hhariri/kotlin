@@ -142,10 +142,15 @@ public abstract class AnnotationCodegen {
             if (isInvisibleFromTheOutside(descriptor)) return;
             if (descriptor instanceof ValueParameterDescriptor && isInvisibleFromTheOutside(descriptor.getContainingDeclaration())) return;
 
-            if (!(descriptor instanceof ConstructorDescriptor)) {
+            if (!(descriptor instanceof ConstructorDescriptor) && !returnsVoid(descriptor)) {
                 generateNullabilityAnnotation(descriptor.getReturnType(), annotationDescriptorsAlreadyPresent);
             }
         }
+    }
+
+    private boolean returnsVoid(@NotNull CallableDescriptor descriptor) {
+        return descriptor instanceof FunctionDescriptor
+               && typeMapper.mapSignature((FunctionDescriptor) descriptor).getReturnType().getSort() == Type.VOID;
     }
 
     private static boolean isInvisibleFromTheOutside(@Nullable DeclarationDescriptor descriptor) {
