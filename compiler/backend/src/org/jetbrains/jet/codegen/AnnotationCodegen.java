@@ -142,7 +142,9 @@ public abstract class AnnotationCodegen {
             if (isInvisibleFromTheOutside(descriptor)) return;
             if (descriptor instanceof ValueParameterDescriptor && isInvisibleFromTheOutside(descriptor.getContainingDeclaration())) return;
 
-            generateNullabilityAnnotation(descriptor.getReturnType(), annotationDescriptorsAlreadyPresent);
+            if (!(descriptor instanceof ConstructorDescriptor)) {
+                generateNullabilityAnnotation(descriptor.getReturnType(), annotationDescriptorsAlreadyPresent);
+            }
         }
     }
 

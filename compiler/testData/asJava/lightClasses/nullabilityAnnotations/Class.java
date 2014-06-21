@@ -69,6 +69,5 @@ public final class Class implements kotlin.jvm.internal.KObject {
     @org.jetbrains.annotations.NotNull
     public final void setNullableVarWithGetSet(@org.jetbrains.annotations.Nullable @jet.runtime.typeinfo.JetValueParameter(name = "v", type = "?") java.lang.String v) { /* compiled code */ }
 
-    @org.jetbrains.annotations.NotNull
     public Class() { /* compiled code */ }
 }
